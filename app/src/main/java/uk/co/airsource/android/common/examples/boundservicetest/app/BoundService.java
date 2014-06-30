@@ -16,7 +16,7 @@ public class BoundService extends Service
 
     private long stamp = 0;
 
-    private CountTask mOnGoingTask = this.new CountTask();
+    private CountTask mOnGoingTask;
     private TestRequest mOnGoingRequest;
 
     private PriorityQueue<TestRequest> mQueue = new PriorityQueue<TestRequest>(10,
@@ -72,7 +72,7 @@ public class BoundService extends Service
         mQueue.add(request);
         if (!cancelOnGoingIfNecessary())
         {
-            startNextRequestIfNecessary();
+            startNextRequestIfNoneOnGoing();
         }
     }
 
@@ -101,16 +101,26 @@ public class BoundService extends Service
     private void onGoingCancelled()
     {
         mQueue.add(mOnGoingRequest);
-        startNextRequestIfNecessary();
+        startNextRequestIfAny();
     }
 
     private void onGoingFinished()
     {
         mOnGoingRequest.mResultListener.onRequestFinished();
-        startNextRequestIfNecessary();
+        startNextRequestIfAny();
     }
 
-    private void startNextRequestIfNecessary()
+    private void startNextRequestIfNoneOnGoing()
+    {
+        if ((mOnGoingTask == null) && (mQueue.peek() != null))
+        {
+            mOnGoingRequest = mQueue.poll();
+            mOnGoingTask = this.new CountTask();
+            mOnGoingTask.execute(mOnGoingRequest.getWorkCount());
+        }
+    }
+
+    private void startNextRequestIfAny()
     {
         mOnGoingTask = null;
         mOnGoingRequest = null;
